@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rowad SQL Data Assistant</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0b0d12;
+    --panel: #12151c;
+    --panel-raised: #171b24;
+    --border: #232733;
+    --border-soft: #1b1f29;
+    --text: #e8eaf0;
+    --text-dim: #9aa1b2;
+    --text-faint: #5c6376;
+    --accent: #4d7fff;
+    --accent-dim: #2d4a99;
+    --accent-soft: rgba(77, 127, 255, 0.12);
+    --danger: #e5555f;
+    --radius: 12px;
+    --sidebar-w: 280px;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Inter", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    transition: margin-left 0.2s ease;
+  }
+  .sidebar.collapsed { margin-left: calc(-1 * var(--sidebar-w)); }
+
+  .brand {
+    padding: 16px 16px 14px;
+  }
+  .brand-mark {
+    display: block;
+    width: 100%;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+    line-height: 0;
+  }
+  .brand-mark img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .brand-text h1 {
+    display: none;
+  }
+  .brand-text p {
+    margin: 8px 2px 0;
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
+
+  .new-chat-btn {
+    margin: 4px 12px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--panel-raised);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .new-chat-btn:hover { background: #1c202b; border-color: #2c3140; }
+  .new-chat-btn svg { width: 15px; height: 15px; }
+
+  .history-label {
+    padding: 6px 16px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 2px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .history-empty {
+    color: var(--text-faint);
+    font-size: 12.5px;
+    padding: 10px 8px;
+    line-height: 1.5;
+  }
+  .history-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  .history-item:hover { background: var(--panel-raised); color: var(--text); }
+  .history-item.active { background: var(--accent-soft); color: var(--text); }
+  .history-item-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .history-item-time {
+    font-size: 10.5px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+  .history-item.active .history-item-time { display: none; }
+  .history-item-delete {
+    display: none;
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
+  .history-item:hover .history-item-delete { display: flex; }
+  .history-item-delete:hover { background: rgba(229, 85, 95, 0.15); color: var(--danger); }
+
+  /* ---------- Main column ---------- */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--panel-raised);
+    color: var(--text-dim);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .sidebar-toggle:hover { color: var(--text); }
+  .topbar-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .topbar-sub {
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
+
+  .conversation {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ---------- Empty state ---------- */
+  .empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 24px;
+    gap: 8px;
+  }
+  .empty-mark {
+    width: 220px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    line-height: 0;
+  }
+  .empty-mark img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .empty-state h2 {
+    font-size: 17px;
+    margin: 0;
+    font-weight: 600;
+  }
+  .empty-state p {
+    font-size: 13.5px;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+    max-width: 380px;
+  }
+  .example-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 480px;
+  }
+  .example-chip {
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--panel-raised);
+    color: var(--text-dim);
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .example-chip:hover { border-color: var(--accent-dim); color: var(--text); }
+
+  /* ---------- Messages ---------- */
+  #messages {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 20px 22px 12px;
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .msg-row {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+  }
+  .avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .avatar.user { background: var(--panel-raised); color: var(--text-dim); border: 1px solid var(--border); }
+  .avatar.bot { background: linear-gradient(135deg, var(--accent), #7f5cff); color: white; }
+
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-meta {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-bottom: 3px;
+  }
+  .msg-text {
+    font-size: 14.5px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: var(--text);
+  }
+  .msg-text.error { color: #f4a3a8; }
+
+  details.sql {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  details.sql summary {
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-faint);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  details.sql summary:hover { color: var(--text-dim); }
+  details.sql pre {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    background: var(--panel);
+    border: 1px solid var(--border-soft);
+    border-radius: 8px;
+    overflow-x: auto;
+    color: #b9c0d4;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .typing-dots {
+    display: inline-flex;
+    gap: 3px;
+    align-items: center;
+    height: 18px;
+  }
+  .typing-dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--text-faint);
+    animation: bounce 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-4px); opacity: 1; }
+  }
+
+  /* ---------- Composer ---------- */
+  .composer {
+    padding: 14px 22px 20px;
+    flex-shrink: 0;
+  }
+  form {
+    display: flex;
+    gap: 8px;
+    max-width: 760px;
+    margin: 0 auto;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 6px 6px 6px 14px;
+  }
+  form:focus-within { border-color: var(--accent-dim); }
+  textarea {
+    flex: 1;
+    resize: none;
+    background: transparent;
+    color: var(--text);
+    border: none;
+    padding: 8px 0;
+    font-size: 14.5px;
+    font-family: inherit;
+    max-height: 140px;
+  }
+  textarea:focus { outline: none; }
+  textarea::placeholder { color: var(--text-faint); }
+  button.send {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  button.send:disabled { opacity: 0.4; cursor: default; }
+  button.send:not(:disabled):hover { background: #3d6ce8; }
+  .composer-hint {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+
+  .sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-faint);
+    flex-shrink: 0;
+  }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #262b38; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #333a4a; }
+
+  /* ---------- Identity / login ---------- */
+  .identity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .identity-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .identity-action {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+  .identity-action:hover { text-decoration: underline; }
+
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 9, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal {
+    width: 320px;
+    background: var(--panel-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .modal h3 {
+    margin: 0 0 14px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .modal label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin: 10px 0 4px;
+  }
+  .modal input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 13.5px;
+  }
+  .modal input:focus { outline: none; border-color: var(--accent-dim); }
+  .modal-error {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 8px;
+    min-height: 14px;
+  }
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .modal-actions button {
+    flex: 1;
+    padding: 8px 0;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .modal-actions .btn-primary { background: var(--accent); color: white; border: none; }
+  .modal-actions .btn-primary:hover { background: #3d6ce8; }
+  .modal-actions .btn-secondary { background: transparent; color: var(--text-dim); }
+  .modal-actions .btn-secondary:hover { color: var(--text); }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark"><img src="Rowad-Logo.png" alt="Rowad"></div>
+        <div class="brand-text">
+          <h1>Rowad Assistant</h1>
+          <p>SQL Data Assistant</p>
+        </div>
+      </div>
+      <button class="new-chat-btn" id="newChatBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+      <div class="history-label">History</div>
+      <div class="history-list" id="historyList"></div>
+      <div class="sidebar-footer">
+        <div class="identity-row">
+          <span class="identity-label" id="identityLabel">Guest session</span>
+          <button class="identity-action" id="identityAction" type="button">Log in</button>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <button class="sidebar-toggle" id="sidebarToggle" type="button" title="Toggle sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div>
+          <div class="topbar-title" id="topbarTitle">New chat</div>
+          <div class="topbar-sub">Projects &middot; AP check payments &middot; PO follow-up</div>
+        </div>
+      </div>
+
+      <div class="conversation" id="conversation">
+        <div id="emptyState" class="empty-state">
+          <div class="empty-mark"><img src="Rowad-Logo.png" alt="Rowad"></div>
+          <h2>Ask about your project data</h2>
+          <p>Questions are answered from three tables: projects, AP check payments, and PO follow-up &mdash; joined through the project dimension.</p>
+          <div class="example-chips" id="exampleChips">
+            <div class="example-chip" data-q="How many projects are there?">How many projects are there?</div>
+            <div class="example-chip" data-q="What is the total AP check payment amount?">Total AP check payment amount?</div>
+            <div class="example-chip" data-q="Which projects have the most open PO lines?">Projects with the most open PO lines?</div>
+            <div class="example-chip" data-q="List the 5 most recent AP check payments.">5 most recent AP check payments</div>
+          </div>
+        </div>
+        <div id="messages" style="display:none"></div>
+      </div>
+
+      <div class="composer">
+        <form id="form">
+          <textarea id="input" rows="1" placeholder="Ask a question..." autofocus></textarea>
+          <button class="send" id="send" type="submit">Send</button>
+        </form>
+        <div class="composer-hint" id="composerHint">Browsing as a guest &mdash; history is saved to this browser only.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="loginOverlay">
+    <div class="modal">
+      <h3>Log in</h3>
+      <form id="loginForm">
+        <label for="loginUsername">Username</label>
+        <input type="text" id="loginUsername" autocomplete="username" required>
+        <label for="loginPassword">Password</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+        <div class="modal-error" id="loginError"></div>
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" id="loginCancel">Cancel</button>
+          <button type="submit" class="btn-primary">Log in</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+<script>
+  const sidebar = document.getElementById('sidebar');
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const historyList = document.getElementById('historyList');
+  const newChatBtn = document.getElementById('newChatBtn');
+  const topbarTitle = document.getElementById('topbarTitle');
+  const conversationEl = document.getElementById('conversation');
+  const emptyState = document.getElementById('emptyState');
+  const messages = document.getElementById('messages');
+  const form = document.getElementById('form');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('send');
+  const exampleChips = document.getElementById('exampleChips');
+  const identityLabel = document.getElementById('identityLabel');
+  const identityAction = document.getElementById('identityAction');
+  const composerHint = document.getElementById('composerHint');
+  const loginOverlay = document.getElementById('loginOverlay');
+  const loginForm = document.getElementById('loginForm');
+  const loginError = document.getElementById('loginError');
+  const loginCancel = document.getElementById('loginCancel');
+
+  let currentConversationId = null;
+  let conversationsCache = [];
+
+  // Guests are identified by a server-set cookie (no header needed). Logged-in
+  // users are identified by a Basic Auth header we attach manually, since we
+  // never want the browser's native login popup forcing a login.
+  function authHeader() {
+    const stored = sessionStorage.getItem('authHeader');
+    return stored ? { Authorization: stored } : {};
+  }
+
+  function authFetch(url, options = {}) {
+    const headers = Object.assign({}, options.headers || {}, authHeader());
+    return fetch(url, Object.assign({}, options, { headers }));
+  }
+
+  async function refreshIdentity() {
+    try {
+      const res = await authFetch('/me');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.is_guest) {
+        identityLabel.textContent = 'Guest session';
+        identityAction.textContent = 'Log in';
+        composerHint.textContent = 'Browsing as a guest — history is saved to this browser only.';
+      } else {
+        identityLabel.textContent = 'Signed in as ' + data.username;
+        identityAction.textContent = 'Log out';
+        composerHint.textContent = 'Your conversation history is private to your account.';
+      }
+    } catch (err) { /* silent */ }
+  }
+
+  function openLogin() {
+    loginError.textContent = '';
+    loginForm.reset();
+    loginOverlay.classList.remove('hidden');
+    document.getElementById('loginUsername').focus();
+  }
+
+  function closeLogin() {
+    loginOverlay.classList.add('hidden');
+  }
+
+  function logout() {
+    sessionStorage.removeItem('authHeader');
+    location.reload();
+  }
+
+  identityAction.addEventListener('click', () => {
+    if (identityAction.textContent === 'Log in') {
+      openLogin();
+    } else {
+      logout();
+    }
+  });
+
+  loginCancel.addEventListener('click', closeLogin);
+  loginOverlay.addEventListener('click', (e) => {
+    if (e.target === loginOverlay) closeLogin();
+  });
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    loginError.textContent = '';
+    try {
+      const res = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        loginError.textContent = data.detail || 'Login failed.';
+        return;
+      }
+      sessionStorage.setItem('authHeader', 'Basic ' + btoa(username + ':' + password));
+      location.reload();
+    } catch (err) {
+      loginError.textContent = 'Could not reach the server.';
+    }
+  });
+
+  function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+  }
+
+  function relativeTime(iso) {
+    const then = new Date(iso + (iso.endsWith('Z') ? '' : 'Z'));
+    const diffMs = Date.now() - then.getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'now';
+    if (mins < 60) return mins + 'm';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + 'h';
+    const days = Math.floor(hours / 24);
+    if (days < 7) return days + 'd';
+    return then.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }
+
+  function showEmptyState() {
+    emptyState.style.display = 'flex';
+    messages.style.display = 'none';
+    messages.innerHTML = '';
+  }
+
+  function showMessages() {
+    emptyState.style.display = 'none';
+    messages.style.display = 'flex';
+  }
+
+  function addRow(role, contentEl) {
+    const row = document.createElement('div');
+    row.className = 'msg-row';
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar ' + (role === 'user' ? 'user' : 'bot');
+    avatar.textContent = role === 'user' ? 'U' : 'R';
+    row.appendChild(avatar);
+    row.appendChild(contentEl);
+    messages.appendChild(row);
+    conversationEl.scrollTop = conversationEl.scrollHeight;
+    return row;
+  }
+
+  function buildBody(role, text, sql, isError) {
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.textContent = role === 'user' ? 'You' : 'Assistant';
+    const textEl = document.createElement('div');
+    textEl.className = 'msg-text' + (isError ? ' error' : '');
+    textEl.textContent = text;
+    body.appendChild(meta);
+    body.appendChild(textEl);
+    if (sql) {
+      const details = document.createElement('details');
+      details.className = 'sql';
+      const summary = document.createElement('summary');
+      summary.textContent = 'View SQL';
+      const pre = document.createElement('pre');
+      pre.textContent = sql;
+      details.appendChild(summary);
+      details.appendChild(pre);
+      body.appendChild(details);
+    }
+    return body;
+  }
+
+  function addUserMessage(text) {
+    showMessages();
+    addRow('user', buildBody('user', text));
+  }
+
+  function addBotMessage(text, sql, isError) {
+    showMessages();
+    addRow('bot', buildBody('bot', text, sql, isError));
+  }
+
+  function addTyping() {
+    showMessages();
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    meta.textContent = 'Assistant';
+    const dots = document.createElement('div');
+    dots.className = 'typing-dots';
+    dots.innerHTML = '<span></span><span></span><span></span>';
+    body.appendChild(meta);
+    body.appendChild(dots);
+    return addRow('bot', body);
+  }
+
+  async function loadConversations() {
+    try {
+      const res = await authFetch('/conversations');
+      if (!res.ok) return;
+      conversationsCache = await res.json();
+      renderHistory();
+    } catch (err) { /* silent - sidebar just stays empty */ }
+  }
+
+  function renderHistory() {
+    historyList.innerHTML = '';
+    if (conversationsCache.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'history-empty';
+      empty.textContent = 'No conversations yet. Ask something to get started.';
+      historyList.appendChild(empty);
+      return;
+    }
+    for (const conv of conversationsCache) {
+      const item = document.createElement('div');
+      item.className = 'history-item' + (conv.id === currentConversationId ? ' active' : '');
+      item.dataset.id = conv.id;
+
+      const title = document.createElement('div');
+      title.className = 'history-item-title';
+      title.textContent = conv.title;
+
+      const time = document.createElement('div');
+      time.className = 'history-item-time';
+      time.textContent = relativeTime(conv.created_at);
+
+      const del = document.createElement('button');
+      del.className = 'history-item-delete';
+      del.type = 'button';
+      del.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+      del.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteConversation(conv.id);
+      });
+
+      item.appendChild(title);
+      item.appendChild(time);
+      item.appendChild(del);
+      item.addEventListener('click', () => openConversation(conv.id));
+      historyList.appendChild(item);
+    }
+  }
+
+  async function openConversation(id) {
+    try {
+      const res = await authFetch('/conversations/' + id);
+      if (!res.ok) return;
+      const conv = await res.json();
+      currentConversationId = conv.id;
+      topbarTitle.textContent = conv.title;
+      showMessages();
+      messages.innerHTML = '';
+      for (const m of conv.messages) {
+        addBotMessageOrUser(m);
+      }
+      renderHistory();
+    } catch (err) { /* ignore */ }
+  }
+
+  function addBotMessageOrUser(m) {
+    if (m.role === 'user') {
+      addRow('user', buildBody('user', m.content));
+    } else {
+      const isError = m.content.startsWith('Error:');
+      addRow('bot', buildBody('bot', m.content, m.sql, isError));
+    }
+  }
+
+  async function deleteConversation(id) {
+    if (!confirm('Delete this conversation?')) return;
+    try {
+      await authFetch('/conversations/' + id, { method: 'DELETE' });
+    } catch (err) { /* ignore */ }
+    conversationsCache = conversationsCache.filter(c => c.id !== id);
+    renderHistory();
+    if (currentConversationId === id) {
+      startNewChat();
+    }
+  }
+
+  function startNewChat() {
+    currentConversationId = null;
+    topbarTitle.textContent = 'New chat';
+    showEmptyState();
+    renderHistory();
+    input.focus();
+  }
+
+  async function ask(question) {
+    addUserMessage(question);
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    const typingRow = addTyping();
+
+    try {
+      const res = await authFetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, conversation_id: currentConversationId })
+      });
+      const data = await res.json();
+      typingRow.remove();
+
+      if (!res.ok) {
+        addBotMessage(data.detail || 'Something went wrong.', null, true);
+      } else {
+        addBotMessage(data.answer, data.sql, false);
+        const isNew = currentConversationId === null;
+        currentConversationId = data.conversation_id;
+        topbarTitle.textContent = question.length > 60 ? question.slice(0, 57) + '...' : question;
+        await loadConversations();
+        if (isNew) renderHistory();
+      }
+    } catch (err) {
+      typingRow.remove();
+      addBotMessage('Could not reach the server. Is it running?', null, true);
+    } finally {
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    ask(question);
+  });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.requestSubmit();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  });
+
+  exampleChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('.example-chip');
+    if (!chip) return;
+    input.value = chip.dataset.q;
+    form.requestSubmit();
+  });
+
+  newChatBtn.addEventListener('click', startNewChat);
+
+  sidebarToggle.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+  });
+
+  loadConversations();
+  refreshIdentity();
+</script>
+</body>
+</html>
