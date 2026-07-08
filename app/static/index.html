@@ -356,7 +356,7 @@
     padding: 14px 22px 20px;
     flex-shrink: 0;
   }
-  form {
+  .composer form {
     display: flex;
     gap: 8px;
     max-width: 760px;
@@ -366,7 +366,7 @@
     border-radius: var(--radius);
     padding: 6px 6px 6px 14px;
   }
-  form:focus-within { border-color: var(--accent-dim); }
+  .composer form:focus-within { border-color: var(--accent-dim); }
   textarea {
     flex: 1;
     resize: none;
@@ -440,65 +440,169 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(5, 6, 9, 0.6);
+    background: rgba(5, 6, 9, 0.72);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 50;
+    padding: 20px;
   }
   .modal-overlay.hidden { display: none; }
   .modal {
-    width: 320px;
+    width: 100%;
+    max-width: 440px;
     background: var(--panel-raised);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
+    border-radius: 16px;
+    padding: 32px 32px 28px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
   }
+  .modal-brand {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .modal-brand img { width: 120px; height: auto; border-radius: 8px; background: #fff; padding: 8px 10px; }
   .modal h3 {
-    margin: 0 0 14px;
-    font-size: 15px;
-    font-weight: 600;
+    margin: 0 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--text);
   }
-  .modal label {
-    display: block;
-    font-size: 12px;
+  .modal-subtitle {
+    margin: 0 0 22px;
+    font-size: 13.5px;
     color: var(--text-dim);
-    margin: 10px 0 4px;
+    text-align: center;
   }
-  .modal input {
-    width: 100%;
+
+  .auth-tabs {
+    display: flex;
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 8px 10px;
-    color: var(--text);
-    font-size: 13.5px;
+    border-radius: 10px;
+    padding: 3px;
+    margin-bottom: 22px;
   }
-  .modal input:focus { outline: none; border-color: var(--accent-dim); }
+  .auth-tab {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-dim);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .auth-tab.active { background: var(--accent); color: #fff; }
+  .auth-tab:not(.active):hover { color: var(--text); }
+
+  .auth-panel { display: none; }
+  .auth-panel.active { display: block; }
+
+  .modal label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin: 14px 0 6px;
+  }
+  .modal label:first-of-type { margin-top: 0; }
+  .modal input {
+    width: 100%;
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 9px;
+    padding: 13px 14px;
+    color: var(--text) !important;
+    font-size: 15px;
+    line-height: 1.3;
+    font-family: inherit;
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--accent);
+  }
+  .modal input::placeholder { color: var(--text-faint); }
+  .modal input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  /* Override browser/Replit autofill styling that can hide typed text */
+  .modal input:-webkit-autofill,
+  .modal input:-webkit-autofill:hover,
+  .modal input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px var(--bg) inset;
+    box-shadow: 0 0 0 1000px var(--bg) inset;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+  .field-hint {
+    font-size: 11.5px;
+    color: var(--text-faint);
+    margin-top: 5px;
+  }
   .modal-error {
     color: var(--danger);
-    font-size: 12px;
-    margin-top: 8px;
-    min-height: 14px;
+    font-size: 13px;
+    margin-top: 12px;
+    min-height: 16px;
+    line-height: 1.4;
   }
   .modal-actions {
     display: flex;
-    gap: 8px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 20px;
   }
   .modal-actions button {
     flex: 1;
-    padding: 8px 0;
-    border-radius: 7px;
-    font-size: 13px;
+    padding: 12px 0;
+    border-radius: 9px;
+    font-size: 14.5px;
     font-weight: 600;
     cursor: pointer;
     border: 1px solid var(--border);
+    transition: background 0.15s, border-color 0.15s, opacity 0.15s;
   }
   .modal-actions .btn-primary { background: var(--accent); color: white; border: none; }
   .modal-actions .btn-primary:hover { background: #3d6ce8; }
+  .modal-actions .btn-primary:disabled { opacity: 0.6; cursor: default; }
   .modal-actions .btn-secondary { background: transparent; color: var(--text-dim); }
-  .modal-actions .btn-secondary:hover { color: var(--text); }
+  .modal-actions .btn-secondary:hover { color: var(--text); border-color: #2c3140; }
+
+  .guest-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 18px;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .guest-divider::before, .guest-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+  .btn-guest {
+    width: 100%;
+    padding: 12px 0;
+    border-radius: 9px;
+    font-size: 14.5px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--panel);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .btn-guest:hover { border-color: var(--accent-dim); background: #1c202b; }
 </style>
 </head>
 <body>
@@ -520,7 +624,10 @@
       <div class="sidebar-footer">
         <div class="identity-row">
           <span class="identity-label" id="identityLabel">Guest session</span>
-          <button class="identity-action" id="identityAction" type="button">Log in</button>
+          <span id="identityActions">
+            <button class="identity-action" id="identityAction" type="button">Log in</button>
+            <button class="identity-action" id="identitySignup" type="button" style="margin-left:10px">Sign up</button>
+          </span>
         </div>
       </div>
     </aside>
@@ -563,18 +670,49 @@
 
   <div class="modal-overlay hidden" id="loginOverlay">
     <div class="modal">
-      <h3>Log in</h3>
-      <form id="loginForm">
-        <label for="loginUsername">Username</label>
-        <input type="text" id="loginUsername" autocomplete="username" required>
-        <label for="loginPassword">Password</label>
-        <input type="password" id="loginPassword" autocomplete="current-password" required>
-        <div class="modal-error" id="loginError"></div>
-        <div class="modal-actions">
-          <button type="button" class="btn-secondary" id="loginCancel">Cancel</button>
-          <button type="submit" class="btn-primary">Log in</button>
-        </div>
-      </form>
+      <div class="modal-brand"><img src="Rowad-Logo.png" alt="Rowad"></div>
+      <h3 id="authTitle">Welcome back</h3>
+      <p class="modal-subtitle" id="authSubtitle">Log in to access your saved conversations.</p>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" id="tabLogin">Log in</button>
+        <button type="button" class="auth-tab" id="tabSignup">Sign up</button>
+      </div>
+
+      <div class="auth-panel active" id="panelLogin">
+        <form id="loginForm">
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" autocomplete="username" placeholder="Enter your username" required>
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Enter your password" required>
+          <div class="modal-error" id="loginError"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="loginCancel">Cancel</button>
+            <button type="submit" class="btn-primary" id="loginSubmit">Log in</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="auth-panel" id="panelSignup">
+        <form id="signupForm">
+          <label for="signupUsername">Username</label>
+          <input type="text" id="signupUsername" autocomplete="username" placeholder="Choose a username" required>
+          <div class="field-hint">3-32 characters: letters, numbers, underscores, hyphens.</div>
+          <label for="signupPassword">Password</label>
+          <input type="password" id="signupPassword" autocomplete="new-password" placeholder="Choose a password" required>
+          <div class="field-hint">At least 8 characters.</div>
+          <label for="signupPasswordConfirm">Confirm password</label>
+          <input type="password" id="signupPasswordConfirm" autocomplete="new-password" placeholder="Re-enter your password" required>
+          <div class="modal-error" id="signupError"></div>
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" id="signupCancel">Cancel</button>
+            <button type="submit" class="btn-primary" id="signupSubmit">Create account</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="guest-divider">or</div>
+      <button type="button" class="btn-guest" id="continueGuestBtn">Continue as guest</button>
     </div>
   </div>
 
@@ -593,11 +731,25 @@
   const exampleChips = document.getElementById('exampleChips');
   const identityLabel = document.getElementById('identityLabel');
   const identityAction = document.getElementById('identityAction');
+  const identitySignup = document.getElementById('identitySignup');
   const composerHint = document.getElementById('composerHint');
   const loginOverlay = document.getElementById('loginOverlay');
   const loginForm = document.getElementById('loginForm');
   const loginError = document.getElementById('loginError');
   const loginCancel = document.getElementById('loginCancel');
+  const loginSubmit = document.getElementById('loginSubmit');
+  const signupForm = document.getElementById('signupForm');
+  const signupError = document.getElementById('signupError');
+  const signupCancel = document.getElementById('signupCancel');
+  const signupSubmit = document.getElementById('signupSubmit');
+  const continueGuestBtn = document.getElementById('continueGuestBtn');
+  const tabLogin = document.getElementById('tabLogin');
+  const tabSignup = document.getElementById('tabSignup');
+  const panelLogin = document.getElementById('panelLogin');
+  const panelSignup = document.getElementById('panelSignup');
+  const authTitle = document.getElementById('authTitle');
+  const authSubtitle = document.getElementById('authSubtitle');
+  const GUEST_ACK_KEY = 'rowad_guest_ack';
 
   let currentConversationId = null;
   let conversationsCache = [];
@@ -623,24 +775,45 @@
       if (data.is_guest) {
         identityLabel.textContent = 'Guest session';
         identityAction.textContent = 'Log in';
+        identitySignup.style.display = 'inline';
         composerHint.textContent = 'Browsing as a guest — history is saved to this browser only.';
+        if (!localStorage.getItem(GUEST_ACK_KEY)) {
+          openAuth('login');
+        }
       } else {
         identityLabel.textContent = 'Signed in as ' + data.username;
         identityAction.textContent = 'Log out';
+        identitySignup.style.display = 'none';
         composerHint.textContent = 'Your conversation history is private to your account.';
       }
     } catch (err) { /* silent */ }
   }
 
-  function openLogin() {
-    loginError.textContent = '';
-    loginForm.reset();
-    loginOverlay.classList.remove('hidden');
-    document.getElementById('loginUsername').focus();
+  function setAuthTab(tab) {
+    const loginActive = tab === 'login';
+    tabLogin.classList.toggle('active', loginActive);
+    tabSignup.classList.toggle('active', !loginActive);
+    panelLogin.classList.toggle('active', loginActive);
+    panelSignup.classList.toggle('active', !loginActive);
+    authTitle.textContent = loginActive ? 'Welcome back' : 'Create your account';
+    authSubtitle.textContent = loginActive
+      ? 'Log in to access your saved conversations.'
+      : 'Sign up to save your conversation history.';
+    (loginActive ? document.getElementById('loginUsername') : document.getElementById('signupUsername')).focus();
   }
 
-  function closeLogin() {
+  function openAuth(tab) {
+    loginError.textContent = '';
+    signupError.textContent = '';
+    loginForm.reset();
+    signupForm.reset();
+    setAuthTab(tab || 'login');
+    loginOverlay.classList.remove('hidden');
+  }
+
+  function closeAuth() {
     loginOverlay.classList.add('hidden');
+    localStorage.setItem(GUEST_ACK_KEY, '1');
   }
 
   function logout() {
@@ -650,15 +823,21 @@
 
   identityAction.addEventListener('click', () => {
     if (identityAction.textContent === 'Log in') {
-      openLogin();
+      openAuth('login');
     } else {
       logout();
     }
   });
+  identitySignup.addEventListener('click', () => openAuth('signup'));
 
-  loginCancel.addEventListener('click', closeLogin);
+  tabLogin.addEventListener('click', () => setAuthTab('login'));
+  tabSignup.addEventListener('click', () => setAuthTab('signup'));
+
+  loginCancel.addEventListener('click', closeAuth);
+  signupCancel.addEventListener('click', closeAuth);
+  continueGuestBtn.addEventListener('click', closeAuth);
   loginOverlay.addEventListener('click', (e) => {
-    if (e.target === loginOverlay) closeLogin();
+    if (e.target === loginOverlay) closeAuth();
   });
 
   loginForm.addEventListener('submit', async (e) => {
@@ -666,6 +845,7 @@
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value;
     loginError.textContent = '';
+    loginSubmit.disabled = true;
     try {
       const res = await fetch('/login', {
         method: 'POST',
@@ -677,10 +857,51 @@
         loginError.textContent = data.detail || 'Login failed.';
         return;
       }
+      localStorage.setItem(GUEST_ACK_KEY, '1');
       sessionStorage.setItem('authHeader', 'Basic ' + btoa(username + ':' + password));
       location.reload();
     } catch (err) {
       loginError.textContent = 'Could not reach the server.';
+    } finally {
+      loginSubmit.disabled = false;
+    }
+  });
+
+  signupForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('signupUsername').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const confirm = document.getElementById('signupPasswordConfirm').value;
+    signupError.textContent = '';
+
+    if (password !== confirm) {
+      signupError.textContent = 'Passwords do not match.';
+      return;
+    }
+    if (password.length < 8) {
+      signupError.textContent = 'Password must be at least 8 characters.';
+      return;
+    }
+
+    signupSubmit.disabled = true;
+    try {
+      const res = await fetch('/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        signupError.textContent = data.detail || 'Could not create account.';
+        return;
+      }
+      localStorage.setItem(GUEST_ACK_KEY, '1');
+      sessionStorage.setItem('authHeader', 'Basic ' + btoa(username + ':' + password));
+      location.reload();
+    } catch (err) {
+      signupError.textContent = 'Could not reach the server.';
+    } finally {
+      signupSubmit.disabled = false;
     }
   });
 

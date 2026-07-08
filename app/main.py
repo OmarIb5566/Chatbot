@@ -1,6 +1,7 @@
 import base64
 import binascii
 import logging
+import re
 import secrets
 
 from fastapi import FastAPI, HTTPException, Request
@@ -76,6 +77,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class SignupRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=32)
+    password: str = Field(..., min_length=8, max_length=128)
+
+
 class ChatRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=2000)
     conversation_id: int | None = None
@@ -112,6 +118,20 @@ def login(payload: LoginRequest):
     if not auth.verify_user(payload.username, payload.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     return {"username": payload.username}
+
+
+@app.post("/signup", status_code=201)
+def signup(payload: SignupRequest):
+    username = payload.username.strip()
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", username):
+        raise HTTPException(
+            status_code=400,
+            detail="Username can only contain letters, numbers, underscores, and hyphens.",
+        )
+    if auth.user_exists(username):
+        raise HTTPException(status_code=409, detail="That username is already taken.")
+    auth.create_user(username, payload.password)
+    return {"username": username}
 
 
 @app.post("/chat", response_model=ChatResponse)
