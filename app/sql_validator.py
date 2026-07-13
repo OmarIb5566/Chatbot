@@ -76,6 +76,7 @@ def validate_and_prepare(sql: str, max_rows: int) -> str:
 
     _cap_row_limit(root, max_rows)
     _default_nulls_last(root)
+    _skip_header_row(root, cte_names)
 
     return root.sql(dialect="postgres")
 
@@ -90,6 +91,28 @@ def _default_nulls_last(root: exp.Expression) -> None:
     """
     for ordered in root.find_all(exp.Ordered):
         ordered.set("nulls_first", False)
+
+
+def _skip_header_row(root: exp.Expression, cte_names: set[str]) -> None:
+    """Row 1 of every whitelisted base table is a stray header row left over
+    from the warehouse's ETL import (the real column names, shifted down to
+    row 2) - replace every reference to a base table with a derived table
+    that scans in physical order and discards that first row, so callers
+    never see it.
+    """
+    for table in list(root.find_all(exp.Table)):
+        table_name = table.name.lower()
+        if table_name in cte_names or table_name not in TABLES:
+            continue
+        alias = table.alias_or_name
+        bare_table = exp.Table(
+            this=table.this.copy(),
+            db=table.args.get("db").copy() if table.args.get("db") else None,
+            catalog=table.args.get("catalog").copy() if table.args.get("catalog") else None,
+        )
+        skip_query = exp.select("*").from_(bare_table).order_by("ctid").offset(1)
+        derived = exp.Subquery(this=skip_query, alias=exp.TableAlias(this=exp.to_identifier(alias)))
+        table.replace(derived)
 
 
 def _cap_row_limit(root: exp.Expression, max_rows: int) -> None:
