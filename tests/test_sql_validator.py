@@ -98,6 +98,34 @@ def test_forces_nulls_last_on_order_by_desc():
     assert "NULLS LAST" in out.upper()
 
 
+def test_skips_stray_header_row_on_base_table():
+    sql = 'SELECT "PROJECT_ID", "NAME" FROM dim_projects LIMIT 10'
+    out = validate_and_prepare(sql, max_rows=200)
+    assert "OFFSET 1" in out.upper()
+    assert "ORDER BY CTID" in out.upper()
+
+
+def test_skips_stray_header_row_on_every_joined_table():
+    sql = (
+        'SELECT p."NAME", f."Cleared_Amount" '
+        'FROM dim_projects p JOIN fact_ap_check_payments f '
+        'ON p."PROJECT_ID" = f."PROJECT_ID" LIMIT 10'
+    )
+    out = validate_and_prepare(sql, max_rows=200)
+    assert out.upper().count("OFFSET 1") == 2
+
+
+def test_does_not_skip_header_row_on_cte_alias():
+    sql = (
+        "WITH totals AS (SELECT project_id, SUM(line_amount) AS total "
+        "FROM fact_po_followup GROUP BY project_id) "
+        "SELECT * FROM totals LIMIT 10"
+    )
+    out = validate_and_prepare(sql, max_rows=200)
+    # only the one real base table (fact_po_followup) gets the skip, not the CTE alias "totals"
+    assert out.upper().count("OFFSET 1") == 1
+
+
 def test_ascending_order_stays_nulls_last_by_default():
     # NULLS LAST is already Postgres's default for ASC, so sqlglot omits the
     # keyword (it only prints when it differs from the dialect default) -
