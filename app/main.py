@@ -104,7 +104,7 @@ def health():
     return {
         "status": status,
         "database": "ok" if db_ok else "unreachable",
-        "llm": "ok" if llm_ok else f"unreachable or model '{settings.ollama_model}' not pulled",
+        "llm": "ok" if llm_ok else f"unreachable or model '{settings.openai_model}' not available",
     }
 
 

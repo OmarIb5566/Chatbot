@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     ollama_request_timeout_s: int = 120
     ollama_seed: int = 42
 
+    openai_api_key: str = ""
+    openai_model: str = "gpt-4o-mini"
+    openai_request_timeout_s: int = 120
+
     sql_max_rows: int = 200
     sql_max_repair_attempts: int = 2
 
