@@ -81,3 +81,4 @@ python-dotenv
 requests
 sqlglot
 uvicorn[standard]
+openai
