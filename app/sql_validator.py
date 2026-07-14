@@ -11,7 +11,7 @@ and caps the returned row count.
 import sqlglot
 from sqlglot import exp
 
-from app.schema import TABLES
+from app.schema import TABLE_COLUMN_LOOKUP, TABLES
 
 FORBIDDEN_FUNCS = {
     "pg_sleep",
@@ -66,6 +66,8 @@ def validate_and_prepare(sql: str, max_rows: int) -> str:
         if schema_name and schema_name != "public":
             raise SQLValidationError(f"Schema \"{table.db}\" is not allowed.")
 
+    _validate_columns(root, cte_names)
+
     for func in root.find_all(exp.Anonymous, exp.Func):
         func_name = (func.name or getattr(func, "sql_name", lambda: "")()).lower()
         if func_name in FORBIDDEN_FUNCS:
@@ -81,6 +83,57 @@ def validate_and_prepare(sql: str, max_rows: int) -> str:
     return root.sql(dialect="postgres")
 
 
+def _validate_columns(root: exp.Expression, cte_names: set[str]) -> None:
+    """Catch hallucinated/misspelled column names before they ever reach Postgres.
+
+    Only validates columns we can confidently attribute to a real whitelisted
+    table: those explicitly qualified with a table/alias that resolves to one,
+    or unqualified columns in a query that touches exactly one physical table.
+    Columns from CTE aliases (or ambiguous unqualified columns in multi-table
+    queries) are left to Postgres, since sqlglot doesn't do full scope binding
+    here and we'd rather under-validate than false-positive on a legitimate
+    CTE-derived column.
+    """
+    alias_to_table: dict[str, str] = {}
+    for table in root.find_all(exp.Table):
+        name = table.name.lower()
+        if name in TABLES:
+            alias_to_table[table.alias_or_name.lower()] = name
+
+    single_table = next(iter(alias_to_table.values())) if len(alias_to_table) == 1 else None
+
+    # Output aliases (e.g. `SUM(x) AS total`) are legal to reference unqualified
+    # in GROUP BY/ORDER BY/HAVING - they aren't real table columns, so exclude them.
+    select_aliases = {
+        projection.alias.lower()
+        for select in root.find_all(exp.Select)
+        for projection in select.expressions
+        if isinstance(projection, exp.Alias)
+    }
+
+    for col in root.find_all(exp.Column):
+        table_ref = col.table.lower() if col.table else ""
+        if table_ref:
+            if table_ref in cte_names:
+                continue
+            real_table = alias_to_table.get(table_ref)
+            if real_table is None:
+                continue
+        elif col.name.lower() in select_aliases:
+            continue
+        elif single_table:
+            real_table = single_table
+        else:
+            continue
+
+        if col.name.lower() not in TABLE_COLUMN_LOOKUP[real_table]:
+            valid_cols = ", ".join(f'"{c}"' for c in TABLE_COLUMN_LOOKUP[real_table].values())
+            raise SQLValidationError(
+                f'Column "{col.name}" does not exist on table "{real_table}". '
+                f"Valid columns: {valid_cols}"
+            )
+
+
 def _default_nulls_last(root: exp.Expression) -> None:
     """Postgres defaults DESC ordering to NULLS FIRST, which makes rows with a
     NULL aggregate/amount look like the "top" result. sqlglot resolves
@@ -92,7 +145,7 @@ def _default_nulls_last(root: exp.Expression) -> None:
     for ordered in root.find_all(exp.Ordered):
         ordered.set("nulls_first", False)
 
-
+########################
 def _skip_header_row(root: exp.Expression, cte_names: set[str]) -> None:
     """Row 1 of every whitelisted base table is a stray header row left over
     from the warehouse's ETL import (the real column names, shifted down to
@@ -113,7 +166,7 @@ def _skip_header_row(root: exp.Expression, cte_names: set[str]) -> None:
         skip_query = exp.select("*").from_(bare_table).order_by("ctid").offset(1)
         derived = exp.Subquery(this=skip_query, alias=exp.TableAlias(this=exp.to_identifier(alias)))
         table.replace(derived)
-
+#########################
 
 def _cap_row_limit(root: exp.Expression, max_rows: int) -> None:
     select = root if isinstance(root, exp.Select) else root.find(exp.Select)

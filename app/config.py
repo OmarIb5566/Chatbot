@@ -20,7 +20,10 @@ class Settings(BaseSettings):
 
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
-    openai_request_timeout_s: int = 120
+    # Kept short so our own timeout always fires (and returns a clean JSON
+    # error) well before a hosting platform's reverse-proxy gives up on the
+    # request and drops the connection first.
+    openai_request_timeout_s: int = 30
 
     sql_max_rows: int = 200
     sql_max_repair_attempts: int = 2
