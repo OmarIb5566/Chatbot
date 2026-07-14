@@ -1,1 +1,14 @@
 run = "pip install -r requirements.txt && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+
+[deployment]
+deploymentTarget = "cloudrun"
+
+[userenv]
+
+[userenv.shared]
+DB_NAME = "data_warehouse"
+DB_STATEMENT_TIMEOUT_MS = "8000"
+DB_USER = "rowad_agent"
+OLLAMA_MODEL = "gemma4:e4b"
+SQL_MAX_REPAIR_ATTEMPTS = "2"
+SQL_MAX_ROWS = "200"
