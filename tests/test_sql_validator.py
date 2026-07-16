@@ -91,10 +91,10 @@ def test_rejects_empty_sql():
 
 def test_rejects_hallucinated_column_on_single_table():
     sql = (
-        'SELECT "Supplier_Name", SUM("PAYMENT_AMOUNT") AS total '
+        'SELECT "Supplier_Name", SUM("INVOICE_TOTAL") AS total '
         'FROM fact_ap_check_payments GROUP BY "Supplier_Name" LIMIT 10'
     )
-    with pytest.raises(SQLValidationError, match='"PAYMENT_AMOUNT" does not exist'):
+    with pytest.raises(SQLValidationError, match='"INVOICE_TOTAL" does not exist'):
         validate_and_prepare(sql, max_rows=200)
 
 

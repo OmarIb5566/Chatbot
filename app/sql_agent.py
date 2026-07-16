@@ -30,6 +30,9 @@ Rules:
 - If the question is ambiguous, make the most reasonable assumption instead of asking for clarification.
 - When ranking or sorting by a numeric aggregate (SUM/AVG/COUNT of a nullable column), add a HAVING or WHERE
   condition excluding NULL results (or use NULLS LAST) so rows with no data don't appear as top/bottom results.
+- Never invent a column name. Only use columns exactly as listed in the schema above. When a business
+  term could map to columns on more than one table, or a column is marked "do not use", consult the
+  Business term glossary in the schema above to pick the right one.
 - fact_ap_check_payments and fact_po_followup both have a many-to-many relationship with dim_projects
   (many rows per project in each). If a question needs figures from BOTH fact tables for the same
   project(s), first aggregate each fact table separately per project (e.g. with a CTE doing GROUP BY

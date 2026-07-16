@@ -30,7 +30,12 @@ DIM_PROJECTS = TableDef(
     columns=(
         ColumnDef("PROJECT_ID", "bigint, primary key"),
         ColumnDef("PROJECT_CODE", "varchar, unique project code"),
-        ColumnDef("NAME", "varchar, project name"),
+        ColumnDef(
+            "NAME",
+            "varchar, the canonical/master project name - prefer this table+column for any general "
+            "'project name' lookup unless the question is specifically about how the name was recorded "
+            "on a particular payment or PO line",
+        ),
         ColumnDef("PROJECT_OWNER", "varchar"),
         ColumnDef("BUSINESS_UNIT", "varchar"),
         ColumnDef("ORG_ID", "bigint"),
@@ -49,22 +54,66 @@ FACT_AP_CHECK_PAYMENTS = TableDef(
     description="AP (accounts payable) check payment facts - one row per payment/check line.",
     columns=(
         ColumnDef("PROJECT_ID", "bigint, FK to dim_projects.PROJECT_ID"),
-        ColumnDef("EQUIV", "numeric, equivalent amount"),
-        ColumnDef("PROJECT_NUMBER", "varchar"),
+        ColumnDef("Document_Number", "varchar, invoice document number"),
+        ColumnDef("INVOICE_NUM", "varchar, invoice number"),
+        ColumnDef("INVOICE_ID", "bigint, invoice identifier"),
+        ColumnDef("COMP_ID", "bigint, company identifier"),
+        ColumnDef(
+            "PAYMENT_AMOUNT",
+            "numeric, the invoice/payment amount in its original currency - pair with \"Currency\" when "
+            "reporting it. This is usually what 'invoice amount' / 'outstanding invoice' refers to.",
+        ),
+        ColumnDef(
+            "EQUIV",
+            "numeric, PAYMENT_AMOUNT converted to Egyptian pounds (EGP) only - use when the question "
+            "wants EGP regardless of the original currency",
+        ),
+        ColumnDef(
+            "PROJECT_NUMBER",
+            'varchar, DUPLICATE of "PROJECT_CODE" - do not use, use "PROJECT_CODE" instead',
+        ),
         ColumnDef("PROJECT", "varchar, project name as recorded on the payment"),
+        ColumnDef("OWNER", "varchar, project owner as recorded on the payment"),
         ColumnDef("SECTOR", "varchar"),
         ColumnDef("Supplier_Number", "varchar"),
         ColumnDef("Supplier_Name", "varchar"),
         ColumnDef("CHECK_ID", "bigint"),
+        ColumnDef("CE_BANK_ACCT_USE_ID", "bigint"),
+        ColumnDef("BANK_ACCOUNT_ID", "bigint"),
         ColumnDef("VENDOR_ID", "bigint"),
+        ColumnDef("PAYCARD_AUTHORIZATION_NUMBER", "varchar"),
         ColumnDef("BANK_ACCOUNT_NAME", "varchar"),
-        ColumnDef("Payment_Reconcilation_Status", "varchar"),
-        ColumnDef("Cleared_Amount", "numeric"),
-        ColumnDef("Currency", "varchar"),
-        ColumnDef("Cleared_Date", "timestamp"),
-        ColumnDef("CHECK_DATE", "timestamp"),
+        ColumnDef(
+            "Payment_Reconcilation_Status",
+            "varchar, status of the invoice/payment (e.g. cleared vs. still outstanding) - a key signal "
+            "for 'is this invoice outstanding' questions",
+        ),
+        ColumnDef(
+            "Cleared_Amount",
+            "numeric, the amount that has actually been paid/cleared so far - compare against "
+            "PAYMENT_AMOUNT/EQUIV to gauge how much of an invoice is still outstanding",
+        ),
+        ColumnDef("Currency", "varchar, currency code that PAYMENT_AMOUNT is denominated in"),
+        ColumnDef("Cleared_Date", "timestamp, date the payment was cleared"),
+        ColumnDef("CHECK_DATE", "timestamp, date the check was issued"),
+        ColumnDef(
+            "MATURATY_DATE",
+            "timestamp, invoice due/maturity date - relevant for 'outstanding'/overdue questions",
+        ),
+        ColumnDef(
+            "STATUS_LOOKUP_CODE",
+            "varchar, additional payment status code, alongside Payment_Reconcilation_Status",
+        ),
         ColumnDef("VENDOR_SITE_CODE", "varchar"),
-        ColumnDef("CATEGORY", "varchar"),
+        ColumnDef("ORG_NAME", "varchar, organization name"),
+        ColumnDef("ORG_ID", "bigint, organization identifier"),
+        ColumnDef(
+            "AMOUNT",
+            'numeric, DUPLICATE of "Cleared_Amount" - do not use, use "Cleared_Amount" instead',
+        ),
+        ColumnDef("ATTRIBUTE7", "always NULL in this table - do not use"),
+        ColumnDef("COST_CENTER", "always NULL in this table - do not use"),
+        ColumnDef("CATEGORY", "always NULL in this table - do not use"),
         ColumnDef("PROJECT_CODE", "varchar"),
     ),
 )
@@ -82,10 +131,10 @@ FACT_PO_FOLLOWUP = TableDef(
         ColumnDef("po_line_id", "bigint"),
         ColumnDef("exp_type", "text"),
         ColumnDef("exp_category", "text"),
-        ColumnDef("tsk", "text"),
-        ColumnDef("task_id", "double precision"),
+        ColumnDef("tsk", "text, short for 'task' - task code, pair with tsk_name/task_id"),
+        ColumnDef("task_id", "double precision, task identifier, pair with tsk/tsk_name"),
         ColumnDef("attribute4", "text"),
-        ColumnDef("tsk_name", "text"),
+        ColumnDef("tsk_name", "text, task name, pair with tsk/task_id"),
         ColumnDef("line_location_id", "bigint"),
         ColumnDef("po_distribution_id", "bigint"),
         ColumnDef("po_num", "text"),
@@ -129,11 +178,14 @@ FACT_PO_FOLLOWUP = TableDef(
         ColumnDef("pr_num", "text"),
         ColumnDef("pr_num2", "text"),
         ColumnDef("pr_line_num", "double precision"),
-        ColumnDef("vendor_name", "text"),
-        ColumnDef("vendor_no", "varchar"),
-        ColumnDef("vendor_name_line", "text"),
-        ColumnDef("buyer_name", "text"),
-        ColumnDef("buyer_name_line", "text"),
+        ColumnDef("vendor_name", "text, supplier/vendor name, pair with vendor_no"),
+        ColumnDef("vendor_no", "varchar, supplier/vendor number, pair with vendor_name"),
+        ColumnDef("vendor_name_line", 'text, DUPLICATE of "vendor_name" - do not use'),
+        ColumnDef(
+            "buyer_name",
+            "text, the person within the company who made the purchase - pair with buyer_dep",
+        ),
+        ColumnDef("buyer_name_line", 'text, DUPLICATE of "buyer_name" - do not use'),
         ColumnDef("pr_category", "text"),
         ColumnDef("pr_reason", "text"),
         ColumnDef("authorization_status", "text"),
@@ -179,5 +231,31 @@ def render_schema_for_prompt() -> str:
     lines.append(
         "Every column name above must be written EXACTLY as shown, double-quoted, "
         "preserving upper/lower case (Postgres identifiers are case-sensitive here)."
+    )
+    lines.append("")
+    lines.append(
+        "Business term glossary (use this to resolve ambiguous business language to the right column):"
+    )
+    lines.append(
+        '- "project name": prefer dim_projects."NAME" (canonical). Only use '
+        'fact_ap_check_payments."PROJECT" or fact_po_followup.project_name if the question is '
+        "specifically about the name as recorded on a payment or PO line, not a general project lookup."
+    )
+    lines.append(
+        '- "invoice amount" / "outstanding invoice": fact_ap_check_payments."PAYMENT_AMOUNT" (paired '
+        'with "Currency") or "EQUIV" (EGP only). Consider "Cleared_Amount", '
+        '"Payment_Reconcilation_Status", "STATUS_LOOKUP_CODE", and "MATURATY_DATE" as signals for '
+        "whether an invoice is still outstanding vs. paid/cleared."
+    )
+    lines.append(
+        '- "supplier"/"vendor" on payments: fact_ap_check_payments."Supplier_Name"/"Supplier_Number". '
+        "On purchase orders: fact_po_followup.vendor_name/vendor_no."
+    )
+    lines.append(
+        '- "buyer"/"purchaser": fact_po_followup.buyer_name, paired with buyer_dep (the buyer\'s department).'
+    )
+    lines.append('- "task": fact_po_followup.tsk / tsk_name / task_id.')
+    lines.append(
+        '- Never use a column annotated "do not use" above - use the column it references instead.'
     )
     return "\n".join(lines)
