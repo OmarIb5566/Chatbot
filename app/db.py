@@ -1,4 +1,5 @@
 import logging
+import os
 
 import psycopg2
 import psycopg2.extras
@@ -14,16 +15,30 @@ _pool: ThreadedConnectionPool | None = None
 def get_pool() -> ThreadedConnectionPool:
     global _pool
     if _pool is None:
-        _pool = ThreadedConnectionPool(
-            settings.db_pool_min,
-            settings.db_pool_max,
-            host=settings.db_host,
-            port=settings.db_port,
-            dbname=settings.db_name,
-            user=settings.db_user,
-            password=settings.db_password,
-            options=f"-c statement_timeout={settings.db_statement_timeout_ms} -c default_transaction_read_only=on",
+        options = (
+            f"-c statement_timeout={settings.db_statement_timeout_ms} "
+            f"-c default_transaction_read_only=on"
         )
+        database_url = os.environ.get("DATABASE_URL")
+        if database_url:
+            # Use Replit's managed DATABASE_URL (preferred)
+            _pool = ThreadedConnectionPool(
+                settings.db_pool_min,
+                settings.db_pool_max,
+                database_url,
+                options=options,
+            )
+        else:
+            _pool = ThreadedConnectionPool(
+                settings.db_pool_min,
+                settings.db_pool_max,
+                host=settings.db_host,
+                port=settings.db_port,
+                dbname=settings.db_name,
+                user=settings.db_user,
+                password=settings.db_password,
+                options=options,
+            )
     return _pool
 
 

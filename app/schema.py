@@ -123,7 +123,6 @@ FACT_PO_FOLLOWUP = TableDef(
     join_column="project_id",
     description="Purchase-order followup facts - one row per PO line, with sourcing/receiving/invoicing progress.",
     columns=(
-        ColumnDef("project_id", "bigint, FK to dim_projects.PROJECT_ID"),
         ColumnDef("recovery_tax", "double precision"),
         ColumnDef("tax_code", "text"),
         ColumnDef("converted_tax", "double precision"),
@@ -196,6 +195,7 @@ FACT_PO_FOLLOWUP = TableDef(
         ColumnDef("buyer_dep", "text"),
         ColumnDef("quantity open amount", "double precision, NOTE: column name contains spaces, must always be double-quoted"),
         ColumnDef("item_id", "varchar"),
+        ColumnDef("project_id", "bigint, FK to dim_projects.PROJECT_ID"),
     ),
 )
 
