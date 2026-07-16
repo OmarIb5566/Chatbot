@@ -57,7 +57,7 @@ FACT_AP_CHECK_PAYMENTS = TableDef(
         ColumnDef("Document_Number", "varchar, invoice document number"),
         ColumnDef("INVOICE_NUM", "varchar, invoice number"),
         ColumnDef("INVOICE_ID", "bigint, invoice identifier"),
-        ColumnDef("COMP_ID", "bigint, company identifier"),
+        ColumnDef("COMP_ID", "varchar, company identifier"),
         ColumnDef(
             "PAYMENT_AMOUNT",
             "numeric, the invoice/payment amount in its original currency - pair with \"Currency\" when "
@@ -109,7 +109,13 @@ FACT_AP_CHECK_PAYMENTS = TableDef(
         ),
         ColumnDef("VENDOR_SITE_CODE", "varchar"),
         ColumnDef("ORG_NAME", "varchar, organization name"),
-        ColumnDef("ORG_ID", "bigint, organization identifier"),
+        ColumnDef(
+            "ORG_ID",
+            "varchar, organization identifier - NOTE: unlike dim_projects.\"ORG_ID\" (bigint), this "
+            "column is varchar on this table; never join or directly compare the two ORG_ID columns "
+            "across tables (they may not even represent the same identifier space) - join only on "
+            "PROJECT_ID as documented above",
+        ),
         ColumnDef(
             "AMOUNT",
             'numeric, DUPLICATE of "Cleared_Amount" - do not use, use "Cleared_Amount" instead',
