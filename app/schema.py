@@ -85,8 +85,11 @@ FACT_AP_CHECK_PAYMENTS = TableDef(
         ColumnDef("BANK_ACCOUNT_NAME", "varchar"),
         ColumnDef(
             "Payment_Reconcilation_Status",
-            "varchar, status of the invoice/payment (e.g. cleared vs. still outstanding) - a key signal "
-            "for 'is this invoice outstanding' questions",
+            "varchar, status of the invoice/payment. Only valid values: 'CLEARED', "
+            "'CLEARED BUT UNACCOUNTED', 'ISSUED', 'NEGOTIABLE', 'RECONCILED', 'RECONCILED UNACCOUNTED', "
+            "'VOIDED' - note none of these literally contain the word 'outstanding', so never filter with "
+            "ILIKE '%outstanding%'. An invoice is outstanding when Payment_Reconcilation_Status is "
+            "'ISSUED', 'NEGOTIABLE', or 'VOIDED', OR when (PAYMENT_AMOUNT or EQUIV) - Cleared_Amount > 0.",
         ),
         ColumnDef(
             "Cleared_Amount",
@@ -242,10 +245,17 @@ def render_schema_for_prompt() -> str:
         "specifically about the name as recorded on a payment or PO line, not a general project lookup."
     )
     lines.append(
-        '- "invoice amount" / "outstanding invoice": fact_ap_check_payments."PAYMENT_AMOUNT" (paired '
-        'with "Currency") or "EQUIV" (EGP only). Consider "Cleared_Amount", '
-        '"Payment_Reconcilation_Status", "STATUS_LOOKUP_CODE", and "MATURATY_DATE" as signals for '
-        "whether an invoice is still outstanding vs. paid/cleared."
+        '- "invoice amount": fact_ap_check_payments."PAYMENT_AMOUNT" (paired with "Currency") or '
+        '"EQUIV" (EGP only).'
+    )
+    lines.append(
+        '- "outstanding invoice" on fact_ap_check_payments: an invoice is outstanding when '
+        '"Payment_Reconcilation_Status" IN (\'ISSUED\', \'NEGOTIABLE\', \'VOIDED\'), OR when '
+        '("PAYMENT_AMOUNT" or "EQUIV") - "Cleared_Amount" > 0. The outstanding amount itself is '
+        '("PAYMENT_AMOUNT" or "EQUIV") - "Cleared_Amount". Never match "Payment_Reconcilation_Status" '
+        "with ILIKE '%outstanding%' or '=' 'OUTSTANDING' - that value never appears in the data; its "
+        "only valid values are 'CLEARED', 'CLEARED BUT UNACCOUNTED', 'ISSUED', 'NEGOTIABLE', "
+        "'RECONCILED', 'RECONCILED UNACCOUNTED', 'VOIDED'."
     )
     lines.append(
         '- "supplier"/"vendor" on payments: fact_ap_check_payments."Supplier_Name"/"Supplier_Number". '
